@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- Morris.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/morris.js/0.5.1/morris.css">
+
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="">MY DUKA</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+                aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <!-- Navbar items -->
+                </ul>
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="dashboard.html">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="products.html">Products</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="sales.html">Sales</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div id="app">
+        
+        <div class="container">
+
+            <canvas id="myChart"></canvas>
+            <div>
+                <!-- <h1>sales per day</h1> -->
+                <div id="lineChart"></div>
+            </div>
+        </div>
+    </div>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- Vue.js -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- morris chart -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.1.4/raphael-min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/morris.js/0.5.1/morris.min.js"></script>
+    <script>
+        Vue.createApp({
+            mounted() {
+                this.renderChart();
+            },
+            methods: {
+                renderChart() {
+                    axios.get("http://127.0.0.1:5000/dashboard")
+                        .then(response => {
+                            const data = response.data;
+                            const chartData = {
+                                labels: data.salesproduct_data.map(item => item.name),
+                                datasets: [{
+                                    label: 'Sales per product',
+                                    data: data.salesproduct_data.map(item => item.sales_product),
+                                    backgroundColor: [
+                                        'rgba(255, 99, 132, 0.2)',
+                                        'rgba(54, 162, 235, 0.2)',
+                                        'rgba(255, 206, 86, 0.2)',
+                                        'rgba(75, 192, 192, 0.2)',
+                                        'rgba(153, 102, 255, 0.2)',
+                                        'rgba(255, 159, 64, 0.2)'
+                                    ],
+                                    borderColor: [
+                                        'rgba(255, 99, 132, 1)',
+                                        'rgba(54, 162, 235, 1)',
+                                        'rgba(255, 206, 86, 1)',
+                                        'rgba(75, 192, 192, 1)',
+                                        'rgba(153, 102, 255, 1)',
+                                        'rgba(255, 159, 64, 1)'
+                                    ],
+                                    borderWidth: 1
+                                }]
+                            };
+
+                            const myChart = new Chart(document.getElementById('myChart').getContext('2d'), {
+                                type: 'bar',
+                                data: chartData,
+                                options: {
+                                    scales: {
+                                        y: {
+                                            beginAtZero: true
+                                        }
+                                    }
+                                }
+                            });
+                            this.chartRendered = true;
+                        })
+                        .catch(error => {
+                            console.error("Error rendering chart:", error);
+                        });
+                },
+                renderlineChart() {
+                    axios.get("http://127.0.0.1:5000/dashboard")
+                        .then(response => {
+                            const data = response.data;
+                            const salesData = data.sales_data;
+
+                            const morrisData = salesData.map(item => ({
+                                title: 'sales per day',
+                                x: item.date,
+                                y: item.total_sales
+                            }));
+
+                            // Morris line chart
+                            new Morris.Line({
+                                element: 'lineChart',
+                                data: morrisData,
+                                options :{
+                                        title: {
+                                            display: true,
+                                            text: 'Sales per Day' // Title of your graph
+                                        }
+                                    
+                                },
+                                xkey: 'x',
+                                ykeys: ['y'],
+                                labels: ['Sales '],
+                                parseTime: false, // Disable automatic parsing of date/time
+                                lineColors: ['#00ff00'] // Set line color
+                            });
+                        })
+                        .catch(error => {
+                            console.error("Error rendering line chart:", error);
+                        });
+                }
+
+            },
+            mounted() {
+                this.renderChart()
+                this.renderlineChart();
+                this.fetch_products();
+            }
+        }).mount('#app');
+    </script>
+</body>
+
+</html>
