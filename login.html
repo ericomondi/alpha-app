@@ -1,77 +1,124 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>User Login</title>
-  <!-- Bootstrap CSS -->
-  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-
-<div id="app" class="container mt-5">
-  <div class="row justify-content-center">
-    <div class="col-md-6">
-      <div class="card">
-        <div class="card-header">
-          <h2>User Login</h2>
-        </div>
-        <div class="card-body">
-          <form @submit.prevent="loginUser">
-            <div class="form-group">
-              <label for="username">Username:</label>
-              <input type="text" class="form-control" id="username" v-model="loginForm.username" required>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Login</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="app" class="container mt-5">
+      <div class="row justify-content-center">
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header">
+              <h2>User Login</h2>
             </div>
-            <div class="form-group">
-              <label for="password">Password:</label>
-              <input type="password" class="form-control" id="password" v-model="loginForm.password" required>
+            <div class="card-body">
+              <form @submit.prevent="loginUser">
+                <div class="form-group">
+                  <label for="username">Username:</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="username"
+                    v-model="loginForm.username"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="password">Password:</label>
+                  <input
+                    type="password"
+                    class="form-control"
+                    id="password"
+                    v-model="loginForm.password"
+                    required
+                  />
+                </div>
+                <button type="submit" class="btn btn-primary">Login</button>
+              </form>
+              <p v-if="message" class="mt-3">{{ message }}</p>
             </div>
-            <button type="submit" class="btn btn-primary">Login</button>
-          </form>
-          <p v-if="message" class="mt-3">{{ message }}</p>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-</div>
 
-<!-- Vue.js -->
-<script src="https://unpkg.com/vue@3"></script>
+    <!-- Vue.js -->
+    <script src="https://unpkg.com/vue@3"></script>
 
-<!-- Axios -->
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-
-<script>
-    const app = Vue.createApp({
-      data() {
-        return {
-          loginForm: {
-            username: '',
-            password: ''
+    <!-- Axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+      const app = Vue.createApp({
+        data() {
+          return {
+            loginForm: {
+              username: "",
+              password: "",
+            },
+            token: null,
+            message: "",
+          };
+        },
+        methods: {
+          loginUser() {
+            axios
+              .post("http://127.0.0.1:5000/login", this.loginForm)
+              .then((response) => {
+                const { token, message } = response.data;
+                if (token) {
+                  this.token = token;
+                  localStorage.setItem("token", token);
+                  console.log("Token stored successfully:", token);
+                  axios.defaults.headers.common[
+                    "Authorization"
+                  ] = `${token}`;
+                  window.location.href = "dashboard.html";
+                } else {
+                  this.message = message;
+                }
+              })
+              .catch((error) => {
+                console.error("Login error:", error.response.data.message);
+                this.message = "An error occurred during login.";
+              });
           },
-          message: ''
-        };
-      },
-      methods: {
-        loginUser() {
-          console.log('Data to be sent:', this.loginForm);
-  
-          axios.post('http://127.0.0.1:5000/login', this.loginForm)
-            .then(response => {
-              this.message = response.data.message;
-              this.data = response.data
-              console.log("Token:", this.data)
-              // Redirect to dashboard or homepage after successful login
-              window.location.href = 'dashboard.html';
-            })
-            .catch(error => {
-              this.message = error.response.data.message;
-            });
-        }
-      }
-    });
-    app.mount('#app');
-</script>
+          // Function to clear token, remove interceptor, and redirect to login page
+          logoutUser() {
+            this.token = null;
+            localStorage.removeItem("token");
+            delete axios.defaults.headers.common["Authorization"];
+            window.location.href = "login.html";
+          },
+        },
+        mounted() {
+          const token = localStorage.getItem("token");
+          if (token) {
+            this.token = token;
+            axios.defaults.headers.common["Authorization"] = `${token}`;
+          }
+        },
+      });
 
-</body>
+      // Add interceptor to set token in headers for all requests
+      axios.interceptors.response.use(
+        (response) => response,
+        (error) => {
+          if (error.response.status === 401) {
+            // Handle unauthorized access (e.g., token expiration)
+            app.logoutUser();
+          }
+          return Promise.reject(error);
+        }
+      );
+
+      app.mount("#app");
+    </script>
+  </body>
 </html>
